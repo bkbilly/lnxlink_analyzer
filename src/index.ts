@@ -39,7 +39,7 @@ export default {
         const mydate = year + '-' + month + '-' + day
         console.log(mydate)
         const { results } = await env.DB.prepare(
-          "SELECT count(*) as sum, country FROM LNXlink WHERE created > ? group by country"
+          "SELECT count(DISTINCT(uuid)) as sum, country FROM LNXlink WHERE created > ? group by country"
         ).bind(mydate).all();
         return Response.json(results);
       } else if (pathname.endsWith("graph")) {

@@ -15,11 +15,9 @@ export default {
         const data = await request.json();
         console.log(data);
         await env.DB.prepare(
-            "INSERT INTO ? (uuid, version, country) VALUES (?, ?, ?)"
-          )
-            .bind(path[2], data.uuid, data.version, request.cf.country)
-            .all();
-            return new Response(null)
+            "INSERT INTO LNXlink (uuid, version, country) VALUES (?, ?, ?)"
+          ).bind(data.uuid, data.version, request.cf.country).all();
+        return new Response(null)
       } else if (path[3] == "users") {
         const { results } = await env.DB.prepare("SELECT version FROM LNXlink group by version").all();
         let mydict = {}

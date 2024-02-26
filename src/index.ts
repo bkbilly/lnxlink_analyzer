@@ -10,7 +10,6 @@ export default {
     const { pathname } = new URL(request.url);
 
     if (pathname.startsWith("/api/lnxlink")) {
-      console.log(request.cf.country)
 
       if (request.method === "POST") {
         const data = await request.json();
@@ -22,15 +21,64 @@ export default {
             .all();
             return new Response(null)
       } else if (pathname.endsWith("users")) {
+        const { results } = await env.DB.prepare("SELECT version FROM LNXlink group by version").all();
+        let mydict = {}
+        for (var result of results) {
+          const { results } = await env.DB.prepare(
+            "SELECT created as date, count(DISTINCT(uuid)) as sum FROM LNXlink WHERE version = ? group by created"
+          ).bind(result.version).all();
+          mydict[result.version] = results
+        }
+        return Response.json(mydict);
+      } else if (pathname.endsWith("countries")) {
         const { results } = await env.DB.prepare(
-          "SELECT date(created) as date, count(DISTINCT(uuid)) as sum, version FROM LNXlink group by date(created), version"
+          "SELECT created as date, count(DISTINCT(uuid)) as sum, country FROM LNXlink group by created, country"
         ).all();
         return Response.json(results);
-      }  else if (pathname.endsWith("countries")) {
+      } else if (pathname.endsWith("graph")) {
         const { results } = await env.DB.prepare(
-          "SELECT date(created) as date, count(DISTINCT(uuid)) as sum, country FROM LNXlink group by date(created), country"
+          "SELECT version FROM LNXlink group by version"
         ).all();
-        return Response.json(results);
+        let data = []
+        for (var result of results) {
+          const { results } = await env.DB.prepare(
+            "SELECT created as date, count(DISTINCT(uuid)) as sum FROM LNXlink WHERE version = ? group by created"
+          ).bind(result.version).all();
+          let data_data = []
+          for (var sql_data of results) {
+            const [y, m, d] = sql_data.date.split("-");
+            var newDate = new Date(y, m - 1, d);
+            data_data.push({"x": newDate.getTime(), "y": sql_data.sum})
+          }
+          data.push({"label": result.version, "data": data_data})
+        }
+
+        const html = `
+        <head>
+          <title>LNXlink Statistics</title>
+          <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+          <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+        </head>
+        <body style="background-color: #111;">
+          <h1 style="color: #999;">LNXlink Statistics</h1>
+          <div><canvas id="myChart"></canvas></div>
+          <script>
+            const ctx = document.getElementById('myChart');
+
+            Chart.defaults.borderColor = "#222";
+            new Chart(ctx, {
+              type: 'line',
+              options: {scales: {x: {type: 'time'}}},
+              data: {datasets: `+ JSON.stringify(data) +`}
+            });
+          </script>
+        </body>
+        `
+        return new Response(html, {
+          headers: {
+            "content-type": "text/html;charset=UTF-8",
+          },
+        });
       }
     }
 

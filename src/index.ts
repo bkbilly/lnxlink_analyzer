@@ -31,9 +31,16 @@ export default {
         }
         return Response.json(mydict);
       } else if (pathname.endsWith("countries")) {
+        var date = new Date();
+        date.setDate(date.getDate() - 10);
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        const mydate = year + '-' + month + '-' + day
+        console.log(mydate)
         const { results } = await env.DB.prepare(
-          "SELECT created as date, count(DISTINCT(uuid)) as sum, country FROM LNXlink group by created, country"
-        ).all();
+          "SELECT count(*) as sum, country FROM LNXlink WHERE created > ? group by country"
+        ).bind(mydate).all();
         return Response.json(results);
       } else if (pathname.endsWith("graph")) {
         const { results } = await env.DB.prepare(

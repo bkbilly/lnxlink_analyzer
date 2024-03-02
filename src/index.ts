@@ -101,9 +101,12 @@ export default {
           "SELECT count(DISTINCT(uuid)) as sum, country FROM LNXlink WHERE created > ? group by country"
         ).bind(mydate).all();
       let data = {};
+      var total_installs = 0
       for (var result of results) {
         data[result.country] = {"sum": result.sum};
+        total_installs += result.sum;
       }
+      console.log(total_installs)
 
       // Create html
       const html = `
@@ -115,7 +118,7 @@ export default {
         <link href="https://cdn.jsdelivr.net/gh/StephanWagner/svgMap@v2.10.1/dist/svgMap.min.css" rel="stylesheet">
       </head>
       <body style="background-color: #111;">
-        <h1 style="color: #999;">LNXlink Statistics</h1>
+        <h1 style="color: #999;">`+ total_installs +` LNXlink installations</h1>
         <div id="svgMap"></div>
         <script>
           new svgMap({

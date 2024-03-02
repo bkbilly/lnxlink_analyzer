@@ -19,10 +19,10 @@ export default {
           ).bind(data.uuid, data.version, request.cf.country).all();
         return new Response(null)
       } else if (path[3] == "users") {
-        const { results } = await env.DB.prepare("SELECT version FROM LNXlink group by version").all();
+        var { results } = await env.DB.prepare("SELECT version FROM LNXlink group by version").all();
         let mydict = {}
         for (var result of results) {
-          const { results } = await env.DB.prepare(
+          var { results } = await env.DB.prepare(
             "SELECT created as date, count(DISTINCT(uuid)) as sum FROM LNXlink WHERE version = ? group by created"
           ).bind(result.version).all();
           mydict[result.version] = results
@@ -36,18 +36,18 @@ export default {
         const year = date.getFullYear();
         const mydate = year + '-' + month + '-' + day
         console.log(mydate)
-        const { results } = await env.DB.prepare(
+        var { results } = await env.DB.prepare(
           "SELECT count(DISTINCT(uuid)) as sum, country FROM LNXlink WHERE created > ? group by country"
         ).bind(mydate).all();
         return Response.json(results);
       }
     } else if (path[2] == "graph" && path.length == 3) {
-      const { results } = await env.DB.prepare(
+      var { results } = await env.DB.prepare(
         "SELECT version FROM LNXlink group by version"
       ).all();
       let data = []
       for (var result of results) {
-        const { results } = await env.DB.prepare(
+        var { results } = await env.DB.prepare(
           "SELECT created as date, count(DISTINCT(uuid)) as sum FROM LNXlink WHERE version = ? group by created"
         ).bind(result.version).all();
         let data_data = []
@@ -78,6 +78,58 @@ export default {
             type: 'line',
             options: {scales: {x: {type: 'time'}}},
             data: {datasets: `+ JSON.stringify(data) +`}
+          });
+        </script>
+      </body>
+      `
+      return new Response(html, {
+        headers: {
+          "content-type": "text/html;charset=UTF-8",
+        },
+      });
+    } else if (path[2] == "map" && path.length == 3) {
+
+      // Get countries
+      var date = new Date();
+      date.setDate(date.getDate() - 10);
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+      const mydate = year + '-' + month + '-' + day
+      console.log(mydate)
+      var { results } = await env.DB.prepare(
+          "SELECT count(DISTINCT(uuid)) as sum, country FROM LNXlink WHERE created > ? group by country"
+        ).bind(mydate).all();
+      let data = {};
+      for (var result of results) {
+        data[result.country] = {"sum": result.sum};
+      }
+
+      // Create html
+      const html = `
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>LNXlink Statistics</title>
+        <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/StephanWagner/svgMap@v2.10.1/dist/svgMap.min.js"></script>
+        <link href="https://cdn.jsdelivr.net/gh/StephanWagner/svgMap@v2.10.1/dist/svgMap.min.css" rel="stylesheet">
+      </head>
+      <body style="background-color: #111;">
+        <h1 style="color: #999;">LNXlink Statistics</h1>
+        <div id="svgMap"></div>
+        <script>
+          new svgMap({
+            targetElementID: 'svgMap',
+            data: {
+              data: {
+                sum: {
+                  name: 'Installations',
+                  format: '{0} Installations',
+                }
+              },
+              applyData: 'sum',
+              values: `+ JSON.stringify(data) +`
+            }
           });
         </script>
       </body>
